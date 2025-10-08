@@ -3,57 +3,153 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Simple Responsive Image Gallery</title>
+  <title>PhotoSpace – Responsive Image Gallery</title>
   <style>
+    /* ---------- GLOBAL THEME ---------- */
     :root{
-      --bg:#f7f8fb; --card:#ffffff; --muted:#6b7280; --accent:#2563eb;
-      --gap:16px; --radius:12px;
-      --max-width:1100px;
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      --bg:#f7f8fb; 
+      --card:#ffffff; 
+      --muted:#6b7280; 
+      --accent:#2563eb;
+      --radius:14px;
+      --gap:16px;
+      font-family: 'Poppins', system-ui, sans-serif;
     }
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;background:var(--bg);color:#111;display:flex;align-items:flex-start;justify-content:center;padding:32px}
-    .container{width:100%;max-width:var(--max-width);}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:#111;min-height:100vh;overflow-x:hidden;}
 
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-    header h1{font-size:20px;margin:0}
-    header p{color:var(--muted);margin:0;font-size:13px}
-
-    .uploader{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:0 6px 18px rgba(16,24,40,0.06);}
-    .upload-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1px solid rgba(16,24,40,0.06);background:#fff;cursor:pointer}
-    .btn.primary{background:linear-gradient(90deg,var(--accent),#3b82f6);color:#fff;border:none}
-    .btn.ghost{background:transparent}
-    .dropzone{flex:1;border:2px dashed rgba(99,102,241,0.15);padding:18px;border-radius:10px;display:flex;align-items:center;justify-content:center;min-height:88px;cursor:pointer}
-    .dropzone.dragover{background:rgba(99,102,241,0.04);border-color:rgba(37,99,235,0.5)}
-
-    .meta{margin-top:12px;color:var(--muted);font-size:13px}
-
-    .gallery{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--gap)}
-    .card{background:var(--card);border-radius:12px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(16,24,40,0.04);position:relative}
-    .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px}
-    .card .filename{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;padding:0 4px}
-    .card .row{display:flex;gap:6px;width:100%;justify-content:space-between;padding:0 4px}
-    .small{font-size:12px;color:var(--muted)}
-    .remove{background:transparent;border:none;color:#ef4444;cursor:pointer}
-
-    /* Modal view */
-    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:999}
-    .modal.open{display:flex}
-    .modal img{max-width:95vw;max-height:90vh;border-radius:10px;box-shadow:0 10px 40px rgba(2,6,23,0.6)}
-
-    /* Responsive tweaks */
-    @media (max-width:600px){
-      header{flex-direction:column;align-items:flex-start;gap:8px}
-      .upload-controls{flex-direction:column;align-items:stretch}
+    /* ---------- LANDING PAGE ---------- */
+    .landing{
+      position:fixed;inset:0;
+      display:flex;align-items:center;justify-content:center;
+      flex-direction:column;
+      background:linear-gradient(135deg,#2563eb,#3b82f6,#93c5fd);
+      color:#fff;text-align:center;
+      transition:opacity 0.8s ease, transform 1s ease;
+      z-index:1000;
     }
+    .landing.hide{opacity:0;pointer-events:none;transform:scale(1.05);}
+    .landing h1{font-size:2.8rem;margin-bottom:12px;letter-spacing:1px;}
+    .landing p{max-width:500px;margin:0 auto 28px;font-size:1rem;opacity:0.9;}
+    .landing button{
+      background:#fff;color:#2563eb;
+      border:none;padding:12px 24px;font-size:1rem;
+      border-radius:var(--radius);cursor:pointer;
+      box-shadow:0 4px 12px rgba(0,0,0,0.15);
+      transition:transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .landing button:hover{
+      transform:translateY(-2px);
+      box-shadow:0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    /* Animated background */
+    .bg-animation{
+      position:absolute;inset:0;overflow:hidden;z-index:-1;
+    }
+    .circle{
+      position:absolute;border-radius:50%;opacity:0.4;
+      animation: float 12s linear infinite;
+      background:rgba(255,255,255,0.15);
+    }
+    .circle:nth-child(1){width:120px;height:120px;top:10%;left:20%;animation-duration:14s;}
+    .circle:nth-child(2){width:200px;height:200px;top:50%;left:60%;animation-duration:18s;}
+    .circle:nth-child(3){width:160px;height:160px;top:70%;left:10%;animation-duration:16s;}
+    @keyframes float{
+      0%{transform:translateY(0) rotate(0deg);}
+      50%{transform:translateY(-30px) rotate(180deg);}
+      100%{transform:translateY(0) rotate(360deg);}
+    }
+
+    /* ---------- GALLERY SECTION ---------- */
+    .container{
+      display:none;
+      max-width:1100px;
+      margin:0 auto;
+      padding:32px;
+    }
+    .container.active{display:block;animation:fadeIn 1s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px;}
+    header h1{font-size:22px;margin:0;color:var(--accent);}
+    header p{color:var(--muted);font-size:14px;max-width:480px;}
+    .meta{color:var(--muted);font-size:13px;}
+
+    .uploader{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:18px;
+      box-shadow:0 6px 18px rgba(16,24,40,0.06);
+    }
+    .upload-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 14px;
+      border-radius:10px;
+      border:1px solid rgba(16,24,40,0.06);
+      background:#fff;
+      cursor:pointer;
+      transition:background 0.2s, transform 0.2s;
+    }
+    .btn:hover{background:#f3f4f6;transform:translateY(-1px);}
+    .btn.primary{background:linear-gradient(90deg,var(--accent),#3b82f6);color:#fff;border:none;}
+    .btn.ghost{background:transparent;}
+
+    .dropzone{
+      flex:1;border:2px dashed rgba(99,102,241,0.25);
+      padding:18px;border-radius:10px;
+      display:flex;align-items:center;justify-content:center;
+      min-height:88px;cursor:pointer;transition:all 0.3s;
+    }
+    .dropzone.dragover{background:rgba(99,102,241,0.04);border-color:rgba(37,99,235,0.5);}
+
+    .gallery{
+      margin-top:18px;
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+      gap:var(--gap);
+    }
+    .card{
+      background:var(--card);
+      border-radius:12px;
+      padding:8px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+      box-shadow:0 4px 14px rgba(16,24,40,0.04);
+      transition:transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(16,24,40,0.08);}
+    .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;cursor:pointer;}
+    .filename{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;padding:0 4px;}
+    .row{display:flex;gap:6px;width:100%;justify-content:space-between;padding:0 4px;}
+    .small{font-size:12px;color:var(--muted);}
+    .remove{background:transparent;border:none;color:#ef4444;cursor:pointer;font-size:13px;}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:999;}
+    .modal.open{display:flex;}
+    .modal img{max-width:95vw;max-height:90vh;border-radius:10px;box-shadow:0 10px 40px rgba(2,6,23,0.6);}
   </style>
 </head>
 <body>
-  <div class="container">
+  <!-- LANDING PAGE -->
+  <div class="landing" id="landing">
+    <div class="bg-animation">
+      <div class="circle"></div><div class="circle"></div><div class="circle"></div>
+    </div>
+    <h1>Welcome to <strong>PhotoSpace</strong></h1>
+    <p>Your simple, elegant and responsive image gallery. Add, preview, and enjoy your images instantly — no upload required!</p>
+    <button id="startBtn">🚀 Start Gallery</button>
+  </div>
+
+  <!-- GALLERY PAGE -->
+  <div class="container" id="galleryContainer">
     <header>
       <div>
-        <h1>Simple Responsive Image Gallery</h1>
+        <h1>PhotoSpace Gallery</h1>
         <p>Add images from your device or drag & drop them into the box below. Click a thumbnail to view full size.</p>
       </div>
       <div class="meta">Images stored temporarily in browser (no upload).</div>
@@ -61,16 +157,13 @@
 
     <section class="uploader" id="uploader">
       <div class="upload-controls">
-        <label class="btn" for="fileInput">📁 Choose images
+        <label class="btn" for="fileInput">📁 Choose Images
           <input id="fileInput" type="file" accept="image/*" multiple style="display:none">
         </label>
-
-        <button class="btn ghost" id="clearAll">🧹 Clear all</button>
-
+        <button class="btn ghost" id="clearAll">🧹 Clear All</button>
         <div class="dropzone" id="dropzone">Drag & drop images here or click to select</div>
       </div>
-      <div class="meta">Tip: You can select many files at once. Images are previewed locally.</div>
-
+      <div class="meta">Tip: Select multiple files at once. Your images stay local.</div>
       <div class="gallery" id="gallery" aria-live="polite"></div>
     </section>
   </div>
@@ -80,6 +173,16 @@
   </div>
 
   <script>
+    /* --- LANDING PAGE --- */
+    const startBtn = document.getElementById('startBtn');
+    const landing = document.getElementById('landing');
+    const galleryContainer = document.getElementById('galleryContainer');
+    startBtn.addEventListener('click', ()=>{
+      landing.classList.add('hide');
+      setTimeout(()=> galleryContainer.classList.add('active'), 600);
+    });
+
+    /* --- GALLERY SCRIPT --- */
     (function(){
       const fileInput = document.getElementById('fileInput');
       const dropzone = document.getElementById('dropzone');
@@ -87,8 +190,6 @@
       const clearAll = document.getElementById('clearAll');
       const modal = document.getElementById('modal');
       const modalImg = document.getElementById('modalImg');
-
-      // Keep references to images (in-memory)
       const images = [];
 
       function bytesToSize(bytes){
@@ -114,21 +215,21 @@
       function renderGallery(){
         gallery.innerHTML = '';
         if(images.length===0){
-          gallery.innerHTML = '<div style="padding:18px;color:var(--muted)">No images yet — add some!</div>';
+          gallery.innerHTML = '<div style=\"padding:18px;color:var(--muted)\">No images yet — add some!</div>';
           return;
         }
         images.forEach(img => {
           const card = document.createElement('div'); card.className='card';
-          const imageEl = document.createElement('img'); imageEl.className='thumb'; imageEl.src = img.src; imageEl.alt = img.name; imageEl.loading='lazy';
-          imageEl.addEventListener('click', ()=>{ openModal(img.src, img.name) });
+          const imageEl = document.createElement('img'); imageEl.className='thumb'; imageEl.src = img.src; imageEl.alt = img.name;
+          imageEl.addEventListener('click', ()=> openModal(img.src, img.name));
           const filename = document.createElement('div'); filename.className='filename'; filename.textContent = img.name;
           const row = document.createElement('div'); row.className='row';
           const small = document.createElement('div'); small.className='small'; small.textContent = bytesToSize(img.size);
           const removeBtn = document.createElement('button'); removeBtn.className='remove'; removeBtn.innerHTML='Remove';
-          removeBtn.addEventListener('click', ()=>{ removeImage(img.id) });
+          removeBtn.addEventListener('click', ()=> removeImage(img.id));
           row.appendChild(small); row.appendChild(removeBtn);
-          card.appendChild(imageEl); card.appendChild(filename); card.appendChild(row);
-          gallery.appendChild(card);
+          card.append(imageEl, filename, row);
+          gallery.append(card);
         });
       }
 
@@ -139,36 +240,22 @@
       }
 
       function openModal(src, name){
-        modalImg.src = src; modalImg.alt = name; modal.classList.add('open');
+        modalImg.src = src; modalImg.alt = name;
+        modal.classList.add('open');
       }
 
       function closeModal(){ modal.classList.remove('open'); modalImg.src=''; }
 
-      // File input
       fileInput.addEventListener('change', (e)=>{ if(e.target.files.length) addFiles(e.target.files); fileInput.value=''; });
-
-      // Dropzone interactions
-      ['dragenter','dragover'].forEach(ev => {
-        dropzone.addEventListener(ev, (e)=>{ e.preventDefault(); e.stopPropagation(); dropzone.classList.add('dragover') });
-      });
-      ['dragleave','drop'].forEach(ev => {
-        dropzone.addEventListener(ev, (e)=>{ e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('dragover') });
-      });
-      dropzone.addEventListener('drop', (e)=>{ if(e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
+      ['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e=>{ e.preventDefault(); dropzone.classList.add('dragover'); }));
+      ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e=>{ e.preventDefault(); dropzone.classList.remove('dragover'); }));
+      dropzone.addEventListener('drop', e=>{ if(e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
       dropzone.addEventListener('click', ()=> fileInput.click());
-
-      // Clear all
       clearAll.addEventListener('click', ()=>{ if(confirm('Clear all images from the gallery?')){ images.length=0; renderGallery(); } });
+      modal.addEventListener('click', e=>{ if(e.target===modal || e.target===modalImg) closeModal(); });
+      document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
 
-      // Modal close on click or Escape
-      modal.addEventListener('click', (e)=>{ if(e.target===modal || e.target===modalImg) closeModal(); });
-      document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
-
-      // Initial render
       renderGallery();
-
-      // Expose for debugging (optional)
-      window._simpleGallery = {images, addFiles, removeImage, renderGallery};
     })();
   </script>
 </body>
