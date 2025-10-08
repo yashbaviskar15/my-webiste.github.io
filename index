@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple Responsive Image Gallery</title>
+  <style>
+    :root{
+      --bg:#f7f8fb; --card:#ffffff; --muted:#6b7280; --accent:#2563eb;
+      --gap:16px; --radius:12px;
+      --max-width:1100px;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:var(--bg);color:#111;display:flex;align-items:flex-start;justify-content:center;padding:32px}
+    .container{width:100%;max-width:var(--max-width);}
+
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    header h1{font-size:20px;margin:0}
+    header p{color:var(--muted);margin:0;font-size:13px}
+
+    .uploader{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:0 6px 18px rgba(16,24,40,0.06);}
+    .upload-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1px solid rgba(16,24,40,0.06);background:#fff;cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,var(--accent),#3b82f6);color:#fff;border:none}
+    .btn.ghost{background:transparent}
+    .dropzone{flex:1;border:2px dashed rgba(99,102,241,0.15);padding:18px;border-radius:10px;display:flex;align-items:center;justify-content:center;min-height:88px;cursor:pointer}
+    .dropzone.dragover{background:rgba(99,102,241,0.04);border-color:rgba(37,99,235,0.5)}
+
+    .meta{margin-top:12px;color:var(--muted);font-size:13px}
+
+    .gallery{margin-top:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--gap)}
+    .card{background:var(--card);border-radius:12px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(16,24,40,0.04);position:relative}
+    .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px}
+    .card .filename{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;padding:0 4px}
+    .card .row{display:flex;gap:6px;width:100%;justify-content:space-between;padding:0 4px}
+    .small{font-size:12px;color:var(--muted)}
+    .remove{background:transparent;border:none;color:#ef4444;cursor:pointer}
+
+    /* Modal view */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:999}
+    .modal.open{display:flex}
+    .modal img{max-width:95vw;max-height:90vh;border-radius:10px;box-shadow:0 10px 40px rgba(2,6,23,0.6)}
+
+    /* Responsive tweaks */
+    @media (max-width:600px){
+      header{flex-direction:column;align-items:flex-start;gap:8px}
+      .upload-controls{flex-direction:column;align-items:stretch}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Simple Responsive Image Gallery</h1>
+        <p>Add images from your device or drag & drop them into the box below. Click a thumbnail to view full size.</p>
+      </div>
+      <div class="meta">Images stored temporarily in browser (no upload).</div>
+    </header>
+
+    <section class="uploader" id="uploader">
+      <div class="upload-controls">
+        <label class="btn" for="fileInput">📁 Choose images
+          <input id="fileInput" type="file" accept="image/*" multiple style="display:none">
+        </label>
+
+        <button class="btn ghost" id="clearAll">🧹 Clear all</button>
+
+        <div class="dropzone" id="dropzone">Drag & drop images here or click to select</div>
+      </div>
+      <div class="meta">Tip: You can select many files at once. Images are previewed locally.</div>
+
+      <div class="gallery" id="gallery" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <img id="modalImg" alt="Full view">
+  </div>
+
+  <script>
+    (function(){
+      const fileInput = document.getElementById('fileInput');
+      const dropzone = document.getElementById('dropzone');
+      const gallery = document.getElementById('gallery');
+      const clearAll = document.getElementById('clearAll');
+      const modal = document.getElementById('modal');
+      const modalImg = document.getElementById('modalImg');
+
+      // Keep references to images (in-memory)
+      const images = [];
+
+      function bytesToSize(bytes){
+        if(bytes===0) return '0 B';
+        const k = 1024, sizes = ['B','KB','MB','GB'];
+        const i = Math.floor(Math.log(bytes)/Math.log(k));
+        return parseFloat((bytes/Math.pow(k,i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      function addFiles(fileList){
+        const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+        files.forEach(file => {
+          const id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            images.push({id, name:file.name, size:file.size, src:e.target.result});
+            renderGallery();
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function renderGallery(){
+        gallery.innerHTML = '';
+        if(images.length===0){
+          gallery.innerHTML = '<div style="padding:18px;color:var(--muted)">No images yet — add some!</div>';
+          return;
+        }
+        images.forEach(img => {
+          const card = document.createElement('div'); card.className='card';
+          const imageEl = document.createElement('img'); imageEl.className='thumb'; imageEl.src = img.src; imageEl.alt = img.name; imageEl.loading='lazy';
+          imageEl.addEventListener('click', ()=>{ openModal(img.src, img.name) });
+          const filename = document.createElement('div'); filename.className='filename'; filename.textContent = img.name;
+          const row = document.createElement('div'); row.className='row';
+          const small = document.createElement('div'); small.className='small'; small.textContent = bytesToSize(img.size);
+          const removeBtn = document.createElement('button'); removeBtn.className='remove'; removeBtn.innerHTML='Remove';
+          removeBtn.addEventListener('click', ()=>{ removeImage(img.id) });
+          row.appendChild(small); row.appendChild(removeBtn);
+          card.appendChild(imageEl); card.appendChild(filename); card.appendChild(row);
+          gallery.appendChild(card);
+        });
+      }
+
+      function removeImage(id){
+        const idx = images.findIndex(i=>i.id===id);
+        if(idx>-1) images.splice(idx,1);
+        renderGallery();
+      }
+
+      function openModal(src, name){
+        modalImg.src = src; modalImg.alt = name; modal.classList.add('open');
+      }
+
+      function closeModal(){ modal.classList.remove('open'); modalImg.src=''; }
+
+      // File input
+      fileInput.addEventListener('change', (e)=>{ if(e.target.files.length) addFiles(e.target.files); fileInput.value=''; });
+
+      // Dropzone interactions
+      ['dragenter','dragover'].forEach(ev => {
+        dropzone.addEventListener(ev, (e)=>{ e.preventDefault(); e.stopPropagation(); dropzone.classList.add('dragover') });
+      });
+      ['dragleave','drop'].forEach(ev => {
+        dropzone.addEventListener(ev, (e)=>{ e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('dragover') });
+      });
+      dropzone.addEventListener('drop', (e)=>{ if(e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
+      dropzone.addEventListener('click', ()=> fileInput.click());
+
+      // Clear all
+      clearAll.addEventListener('click', ()=>{ if(confirm('Clear all images from the gallery?')){ images.length=0; renderGallery(); } });
+
+      // Modal close on click or Escape
+      modal.addEventListener('click', (e)=>{ if(e.target===modal || e.target===modalImg) closeModal(); });
+      document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
+
+      // Initial render
+      renderGallery();
+
+      // Expose for debugging (optional)
+      window._simpleGallery = {images, addFiles, removeImage, renderGallery};
+    })();
+  </script>
+</body>
+</html>
